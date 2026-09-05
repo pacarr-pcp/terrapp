@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#3F51B5">
+<title>TerrApp — Inspección en terreno</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <span class="brand">SIMET · TerrApp</span>
+  <span id="who" class="who" hidden></span>
+  <button id="btnSalir" class="link" hidden>Salir</button>
+</header>
+
+<main>
+
+  <!-- ───────── LOGIN ───────── -->
+  <section id="viewLogin" class="view">
+    <h1>Ingreso</h1>
+    <label>Inspector
+      <select id="inInspector">
+        <option value="PCP">PCP</option><option value="SRS">SRS</option>
+        <option value="DPG">DPG</option><option value="AVR">AVR</option>
+      </select>
+    </label>
+    <label>PIN
+      <input id="inPin" type="password" inputmode="numeric" autocomplete="off" maxlength="8">
+    </label>
+    <button id="btnLogin" class="primary">Entrar</button>
+    <p id="loginMsg" class="msg" role="alert"></p>
+  </section>
+
+  <!-- ───────── MENÚ ───────── -->
+  <section id="viewMenu" class="view" hidden>
+    <h1>¿Qué vas a hacer?</h1>
+    <button id="btnMenuInsp" class="primary">Nueva inspección</button>
+    <button id="btnMenuCli" class="secondary">Clientes (OTE)</button>
+  </section>
+
+  <!-- ───────── CABECERA ───────── -->
+  <section id="viewHeader" class="view" hidden>
+    <h1>Nueva inspección</h1>
+
+    <label>AR (N° inspección)
+      <input id="inAr" type="text" inputmode="numeric" maxlength="5" placeholder="0000">
+    </label>
+
+    <label>OTE
+      <span class="row">
+        <input id="inOte" type="text" inputmode="numeric" maxlength="6" placeholder="0000">
+        <button id="btnBuscarOte" class="secondary">Buscar</button>
+      </span>
+    </label>
+    <div id="sedeBox" class="sedebox"></div>
+
+    <label>RAM
+      <input id="inRam" type="text" inputmode="numeric" maxlength="6" placeholder="00000">
+    </label>
+
+    <label>Fecha
+      <input id="inFecha" type="date">
+    </label>
+
+    <div class="actions">
+      <button id="btnBackMenu1" class="link">‹ Menú</button>
+      <button id="btnAMuestras" class="primary">Continuar a muestras</button>
+    </div>
+    <p id="headerMsg" class="msg" role="alert"></p>
+  </section>
+
+  <!-- ───────── MUESTRAS ───────── -->
+  <section id="viewSamples" class="view" hidden>
+    <h1>Muestras <span id="sampleCount" class="pill">0</span></h1>
+    <p class="hint">Total: <b id="totKg">0</b> kg · <span id="totU">0</span> unidades</p>
+    <ul id="sampleList" class="samples"></ul>
+    <button id="btnAddSample" class="secondary">+ Agregar muestra</button>
+    <div class="actions">
+      <button id="btnBackHeader" class="link">‹ Cabecera</button>
+      <button id="btnGenerar" class="primary">Generar reporte PDF</button>
+    </div>
+    <p id="samplesMsg" class="msg" role="alert"></p>
+    <p id="queuedMsg" class="hint" hidden></p>
+  </section>
+
+  <!-- ───────── RESULTADO ───────── -->
+  <section id="viewResult" class="view" hidden>
+    <h1>Reporte generado</h1>
+    <dl class="result">
+      <dt>Solicitante</dt><dd id="resSol">—</dd>
+      <dt>Cliente</dt><dd id="resCli">—</dd>
+      <dt>Lugar</dt><dd id="resLugar">—</dd>
+      <dt>Total</dt><dd id="resTon">—</dd>
+    </dl>
+    <a id="resPdf" class="primary as-btn" target="_blank" rel="noopener">Abrir PDF</a>
+    <button id="btnNueva" class="secondary">Nueva inspección</button>
+  </section>
+
+  <!-- ───────── CLIENTES (OTE) ───────── -->
+  <section id="viewClientes" class="view" hidden>
+    <h1>Clientes / OTE</h1>
+    <label>Buscar
+      <input id="cliQ" type="search" placeholder="OTE, empresa, comuna, sede…">
+    </label>
+    <button id="btnCliNueva" class="secondary">+ Nueva ubicación</button>
+    <ul id="cliList" class="samples"></ul>
+    <div class="actions">
+      <button id="btnBackMenu2" class="link">‹ Menú</button>
+    </div>
+    <p id="cliMsg" class="msg" role="alert"></p>
+  </section>
+
+</main>
+
+<!-- ───────── DIÁLOGO MUESTRA ───────── -->
+<dialog id="dlgSample">
+  <form method="dialog" id="formSample">
+    <h2 id="dlgTitle">Muestra</h2>
+    <label>Muestra (N°) <input name="muestra" required></label>
+    <label>Tipo <input name="tipo" list="tipos" required><datalist id="tipos"></datalist></label>
+    <label>Dimensiones <input name="dimension" placeholder="AxBxC"></label>
+    <label>Grado <input name="grado" list="grados"><datalist id="grados"></datalist></label>
+    <label>Colada <input name="colada" placeholder="Heat N°"></label>
+    <label>Peso (kg) <input name="peso" type="text" inputmode="decimal"></label>
+    <label>Unidades <input name="cantidad" type="text" inputmode="numeric"></label>
+    <label class="check"><input name="identificado" type="checkbox"> Identificado</label>
+    <menu>
+      <button value="cancel" type="submit" class="link">Cancelar</button>
+      <button value="ok" type="submit" class="primary">Guardar</button>
+    </menu>
+  </form>
+</dialog>
+
+<!-- ───────── DIÁLOGO OTE / UBICACIÓN ───────── -->
+<dialog id="dlgOte">
+  <form method="dialog" id="formOte">
+    <h2 id="dlgOteTitle">Ubicación</h2>
+    <label>OTE <input name="ote" inputmode="numeric" required></label>
+    <label>Empresa <input name="cliente" required></label>
+    <label>Contacto (nombre) <input name="nombre"></label>
+    <label>Calle N° <input name="calle"></label>
+    <label>Comuna <input name="comuna"></label>
+    <label>Sede / etiqueta <input name="sede" placeholder="Planta Maipú, Bodega…"></label>
+    <menu>
+      <button value="cancel" type="submit" class="link">Cancelar</button>
+      <button value="ok" type="submit" class="primary">Guardar</button>
+    </menu>
+  </form>
+</dialog>
+
+<div id="offline" class="offline" hidden>Sin conexión — los envíos quedan en cola</div>
+
+<script src="app.js"></script>
+</body>
+</html>
