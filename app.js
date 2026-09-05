@@ -4,7 +4,7 @@
    sólo la URL pública del backend. */
 
 // ==== CONFIG ====
-const BACKEND_URL = 'PEGAR_AQUI_LA_URL_/exec_DEL_APPS_SCRIPT';
+const BACKEND_URL = 'https://script.google.com/macros/s/AKfycbw3snjl4xousmjRGj9Fvwg2U1zXL-Exnhxam7TIrxRscW75fbf3FC77ooRyZyV-U3TxmA/exec';
 
 const TIPOS = ['Perfil cuadrado','Perfil rectangular','Perfil canal','Plancha','Angulo plegado',
   'Angulo laminado','Viga UPN','Viga IPE','Viga IPN','Viga HEA','Viga HEB','Viga WF','Viga I',
