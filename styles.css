@@ -48,8 +48,15 @@ a.as-btn{display:block;text-align:center;text-decoration:none}
 dialog{border:0;border-radius:14px;padding:1.1rem;max-width:420px;width:92%;
   background:var(--card);color:var(--ink)}
 dialog::backdrop{background:rgba(0,0,0,.45)}
-#formSample{display:flex;flex-direction:column;gap:.7rem}
-#formSample menu{display:flex;justify-content:flex-end;gap:.6rem;margin:.4rem 0 0;padding:0}
+#formSample,#formOte{display:flex;flex-direction:column;gap:.7rem}
+#formSample menu,#formOte menu{display:flex;justify-content:flex-end;gap:.6rem;margin:.4rem 0 0;padding:0}
+#formSample small{color:var(--muted);font-size:.78rem}
+#formSample select.grado{font-weight:700}
+.stdrow{display:flex;gap:.5rem;align-items:center}
+.stdrow input{flex:1;min-width:0}
+.stdrow button{white-space:nowrap;min-height:44px}
+label.check.on{background:#f59e0b;color:#111;font-weight:700;border-radius:9px;
+  padding:.5rem .7rem;box-shadow:0 0 0 2px #f59e0b}
 .result{display:grid;grid-template-columns:auto 1fr;gap:.35rem .9rem;margin:.2rem 0 .6rem}
 .result dt{color:var(--muted);font-size:.85rem}
 .result dd{margin:0;font-weight:600}

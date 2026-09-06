@@ -16,17 +16,38 @@ const GRADOS = ['SAE1020','S275jr','A36','A572','A653','A992','A242','A588','A50
 const S = {
   inspector:null, pin:null,
   header:{ ar:'', ote:'', ram:'', fecha:'', sedeId:'' },
-  samples:[], editIndex:-1,
+  coladas:[], editIndex:-1,
   cliEditId:null
 };
+// n° de muestras por colada (espejo del backend)
+function nMuestras(kg, identificada){
+  const div = identificada ? 40000 : 20000;
+  const cap = identificada ? 5 : 10;
+  let n = Math.ceil(num(kg) / div);
+  if (!isFinite(n) || n < 1) n = 1;
+  return Math.min(cap, n);
+}
 const $ = s => document.querySelector(s);
 const VIEWS = ['viewLogin','viewMenu','viewHeader','viewSamples','viewResult','viewClientes'];
 function show(id){ VIEWS.forEach(v => $('#'+v).hidden = (v!==id)); window.scrollTo(0,0); }
 
 // ==== arranque ====
 document.addEventListener('DOMContentLoaded', () => {
-  fill('#tipos', TIPOS); fill('#grados', GRADOS);
+  initSelects();
   $('#inFecha').value = todayISO();
+  $('#inAr').addEventListener('blur', e => {
+    const v = e.target.value.trim().replace(/\D/g,'');
+    if (v) e.target.value = v.padStart(4,'0').slice(-4);
+  });
+  $('#selTipo').addEventListener('change', toggleStd);
+  $('#selGrado').addEventListener('change', applyGradoColor);
+  $('#chkId').addEventListener('change', () => { toggleIdLabel(); updateMuestrasPrev(); });
+  $('#btnStd').addEventListener('click', aplicarStd);
+  $('#formSample').peso.addEventListener('input', updateMuestrasPrev);
+  $('#formSample').pos.addEventListener('blur', e => {
+    const v = e.target.value.trim().replace(/\D/g,'');
+    if (v) e.target.value = v.padStart(2,'0').slice(-2);
+  });
 
   const saved = sessionStorage.getItem('terrapp.session');
   if (saved){ Object.assign(S, JSON.parse(saved)); enterApp(); }
@@ -41,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#btnBuscarOte').onclick  = buscarOte;
   $('#btnAMuestras').onclick  = goSamples;
   $('#btnBackHeader').onclick = () => show('viewHeader');
-  $('#btnAddSample').onclick  = () => openSample(-1);
+  $('#btnAddSample').onclick  = () => openColada(-1);
   $('#btnGenerar').onclick    = generar;
   $('#btnNueva').onclick      = () => { resetInspeccion(); show('viewHeader'); };
   $('#formSample').addEventListener('submit', onSampleSubmit);
@@ -58,7 +79,45 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==== helpers ====
-function fill(sel, arr){ $(sel).innerHTML = arr.map(v => `<option value="${v}">`).join(''); }
+function initSelects(){
+  $('#selTipo').innerHTML  = TIPOS.map(t => `<option${t==='Plancha'?' selected':''}>${t}</option>`).join('');
+  $('#selGrado').innerHTML = GRADOS.map(g => `<option${g==='A36'?' selected':''}>${g}</option>`).join('');
+  toggleStd(); applyGradoColor();
+}
+function gradoColor(g){
+  g = String(g||'').toUpperCase();
+  if (g === 'A36') return '#1d4ed8';                 // azul
+  if (g === 'A572' || g === 'A572 GR50') return '#dc2626'; // rojo
+  return '#c026d3';                                  // fucsia
+}
+function applyGradoColor(){
+  const s = $('#selGrado'); if (!s) return;
+  s.style.color = gradoColor(s.value);
+  s.style.fontWeight = '700';
+}
+function toggleStd(){
+  const es = $('#selTipo').value === 'Plancha';
+  $('#stdRow').hidden = !es;
+}
+function aplicarStd(){
+  const f = $('#formSample');
+  const esp = ($('#espStd').value.trim() || f.dimension.value.trim()).replace(/\s/g,'');
+  if (!esp) { $('#espStd').focus(); return; }
+  f.dimension.value = esp + 'x2440x12000';
+}
+function toggleIdLabel(){ $('#idLabel').classList.toggle('on', $('#chkId').checked); }
+function pad2(x){ const v = String(x||'').replace(/\D/g,''); return v ? v.padStart(2,'0').slice(-2) : ''; }
+function updateMuestrasPrev(){
+  const f = $('#formSample'), p = $('#muestrasPrev');
+  const kg = num(f.peso.value);
+  if (!kg){ p.textContent = ''; return; }
+  const n = nMuestras(kg, f.identificado.checked);
+  const ar = S.header.ar || '####', pp = pad2(f.pos.value) || 'PP';
+  const ej = [];
+  for (let k=1;k<=n;k++) ej.push(`${ar}-${pp}-${pad2(k)}${pad2(n)}`);
+  p.innerHTML = `→ <b>${n}</b> muestra${n>1?'s':''}: ${ej.join(', ')}`;
+}
+
 function todayISO(){ return new Date().toISOString().slice(0,10); }
 function toCL(iso){ const [y,m,d] = iso.split('-'); return `${d}/${m}/${y}`; }
 function num(x){ const n = parseFloat(String(x).replace(',','.')); return isFinite(n) ? n : 0; }
@@ -104,7 +163,7 @@ function doLogout(){ sessionStorage.removeItem('terrapp.session'); location.relo
 // ==== cabecera de inspección ====
 function resetInspeccion(){
   S.header = { ar:'', ote:'', ram:'', fecha:todayISO(), sedeId:'' };
-  S.samples = [];
+  S.coladas = [];
   ['#inAr','#inOte','#inRam'].forEach(s => $(s).value = '');
   $('#inFecha').value = todayISO();
   $('#sedeBox').innerHTML = ''; $('#queuedMsg').hidden = true;
@@ -147,23 +206,29 @@ function goSamples(){
   const msg = $('#headerMsg'); msg.textContent = '';
   const ar = $('#inAr').value.trim(), ote = $('#inOte').value.trim(),
         ram = $('#inRam').value.trim(), fecha = $('#inFecha').value;
-  if (!/^\d{3,5}$/.test(ar)) return (msg.textContent = 'AR: 3 a 5 dígitos');
+  if (!/^\d{4}$/.test(ar)) return (msg.textContent = 'AR: 4 dígitos');
   if (!ote)   return (msg.textContent = 'Falta el OTE');
   if (!fecha) return (msg.textContent = 'Falta la fecha');
   if (!S.header.sedeId) return (msg.textContent = 'Presiona "Buscar" y elige la ubicación del OTE');
   S.header.ar = ar; S.header.ote = ote; S.header.ram = ram; S.header.fecha = toCL(fecha);
-  renderSamples(); show('viewSamples');
+  renderColadas(); show('viewSamples');
 }
 
-// ==== muestras ====
-function renderSamples(){
+// ==== coladas ====
+function renderColadas(){
   const ul = $('#sampleList'); ul.innerHTML = '';
-  S.samples.forEach((m,i) => {
+  let totM = 0, totKg = 0, totU = 0;
+  S.coladas.forEach((c,i) => {
+    const n = nMuestras(c.peso, c.identificada);
+    totM += n; totKg += num(c.peso); totU += num(c.cantidad);
     const li = document.createElement('li');
     li.innerHTML = `<div>
-        <b>${esc(m.muestra)}</b> — ${esc(m.tipo)}
-        <div class="meta">${esc(m.dimension||'')} · ${esc(m.grado||'')} · Colada ${esc(m.colada||'—')}
-          · ${num(m.peso)} kg · ${num(m.cantidad)} u · ${m.identificado ? 'Id.' : 'No Id.'}</div>
+        <b>Col. ${esc(c.pos)}</b> · ${esc(c.tipo)}
+        <span style="color:${gradoColor(c.grado)};font-weight:700"> ${esc(c.grado||'')}</span>
+        <span class="pill">${n} m</span>
+        <div class="meta">${esc(c.dimension||'')} · Colada ${esc(c.colada||'—')}
+          · ${num(c.cantidad)} u · ${num(c.peso)} kg · ${c.identificada ? '✔ Identificada' : 'No Id.'}</div>
+        <div class="meta">${S.header.ar}-${esc(c.pos)}-${pad2(1)}${pad2(n)}${n>1?` … ${S.header.ar}-${esc(c.pos)}-${pad2(n)}${pad2(n)}`:''}</div>
       </div>
       <div class="sbtns">
         <button class="secondary" data-e="${i}">Editar</button>
@@ -171,44 +236,55 @@ function renderSamples(){
       </div>`;
     ul.appendChild(li);
   });
-  ul.querySelectorAll('[data-e]').forEach(b => b.onclick = () => openSample(+b.dataset.e));
-  ul.querySelectorAll('[data-d]').forEach(b => b.onclick = () => { S.samples.splice(+b.dataset.d,1); renderSamples(); });
-  $('#sampleCount').textContent = S.samples.length;
-  $('#totKg').textContent = round(S.samples.reduce((a,m)=>a+num(m.peso),0));
-  $('#totU').textContent  = S.samples.reduce((a,m)=>a+num(m.cantidad),0);
+  ul.querySelectorAll('[data-e]').forEach(b => b.onclick = () => openColada(+b.dataset.e));
+  ul.querySelectorAll('[data-d]').forEach(b => b.onclick = () => { S.coladas.splice(+b.dataset.d,1); renderColadas(); });
+  $('#sampleCount').textContent = S.coladas.length;
+  $('#totMuestras').textContent = totM;
+  $('#totKg').textContent = round(totKg);
+  $('#totU').textContent  = totU;
 }
-function openSample(i){
+function openColada(i){
   S.editIndex = i;
   const f = $('#formSample'); f.reset();
-  $('#dlgTitle').textContent = i<0 ? 'Nueva muestra' : 'Editar muestra';
-  if (i>=0){ const m = S.samples[i];
-    f.muestra.value=m.muestra; f.tipo.value=m.tipo; f.dimension.value=m.dimension||'';
-    f.grado.value=m.grado||''; f.colada.value=m.colada||''; f.peso.value=m.peso||'';
-    f.cantidad.value=m.cantidad||''; f.identificado.checked=!!m.identificado;
-  }
+  $('#dlgTitle').textContent = i<0 ? 'Nueva colada' : 'Editar colada';
+  const c = i>=0 ? S.coladas[i] : {};
+  f.pos.value       = c.pos || pad2(S.coladas.length + 1);
+  f.tipo.value      = c.tipo || 'Plancha';
+  f.dimension.value = c.dimension || '';
+  f.grado.value     = c.grado || 'A36';
+  f.colada.value    = c.colada || '';
+  f.cantidad.value  = c.cantidad || '';
+  f.peso.value      = c.peso || '';
+  f.identificado.checked = !!c.identificada;
+  $('#espStd').value = '';
+  toggleStd(); applyGradoColor(); toggleIdLabel(); updateMuestrasPrev();
   $('#dlgSample').showModal();
 }
 function onSampleSubmit(ev){
   if (ev.submitter && ev.submitter.value === 'cancel') return;
   const f = ev.target;
-  const m = {
-    muestra:f.muestra.value.trim(), tipo:f.tipo.value.trim(), dimension:f.dimension.value.trim(),
+  const c = {
+    pos: pad2(f.pos.value),
+    tipo:f.tipo.value.trim(), dimension:f.dimension.value.trim(),
     grado:f.grado.value.trim(), colada:f.colada.value.trim(),
-    peso:f.peso.value.trim(), cantidad:f.cantidad.value.trim(), identificado:f.identificado.checked
+    cantidad:f.cantidad.value.trim(), peso:f.peso.value.trim(),
+    identificada:f.identificado.checked
   };
-  if (!m.muestra || !m.tipo){ ev.preventDefault(); alert('Muestra y Tipo son obligatorios'); return; }
-  if (S.editIndex>=0) S.samples[S.editIndex] = m; else S.samples.push(m);
-  renderSamples();
+  if (!c.pos || !c.tipo || !num(c.peso)){
+    ev.preventDefault(); alert('Pos. colada, Tipo y Peso son obligatorios'); return;
+  }
+  if (S.editIndex>=0) S.coladas[S.editIndex] = c; else S.coladas.push(c);
+  renderColadas();
 }
 
 // ==== generar ====
 async function generar(){
   const msg = $('#samplesMsg'); msg.textContent = ''; msg.className = 'msg';
-  if (!S.samples.length) return (msg.textContent = 'Agregue al menos una muestra');
+  if (!S.coladas.length) return (msg.textContent = 'Agregue al menos una colada');
   const payload = withAuth({
     accion:'crear',
     ar:S.header.ar, ote:S.header.ote, ram:S.header.ram, fecha:S.header.fecha, sedeId:S.header.sedeId,
-    muestras:S.samples
+    coladas:S.coladas
   });
   $('#btnGenerar').disabled = true;
   try{
@@ -230,6 +306,7 @@ function showResult(r){
   $('#resSol').textContent   = e.solicitante || '—';
   $('#resCli').textContent   = e.cliente || '—';
   $('#resLugar').textContent = e.lugar || '—';
+  $('#resCnt').textContent   = (e.nColadas != null ? e.nColadas + ' / ' + e.nMuestras : '—');
   $('#resTon').textContent   = e.totalTon || '—';
   const a = $('#resPdf');
   if (r.pdfUrl){ a.href = r.pdfUrl; a.hidden = false; } else a.hidden = true;

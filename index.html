@@ -74,12 +74,12 @@
     <p id="headerMsg" class="msg" role="alert"></p>
   </section>
 
-  <!-- ───────── MUESTRAS ───────── -->
+  <!-- ───────── COLADAS ───────── -->
   <section id="viewSamples" class="view" hidden>
-    <h1>Muestras <span id="sampleCount" class="pill">0</span></h1>
-    <p class="hint">Total: <b id="totKg">0</b> kg · <span id="totU">0</span> unidades</p>
+    <h1>Coladas <span id="sampleCount" class="pill">0</span></h1>
+    <p class="hint"><b id="totMuestras">0</b> muestras · <b id="totKg">0</b> kg · <span id="totU">0</span> unidades</p>
     <ul id="sampleList" class="samples"></ul>
-    <button id="btnAddSample" class="secondary">+ Agregar muestra</button>
+    <button id="btnAddSample" class="secondary">+ Agregar colada</button>
     <div class="actions">
       <button id="btnBackHeader" class="link">‹ Cabecera</button>
       <button id="btnGenerar" class="primary">Generar reporte PDF</button>
@@ -95,6 +95,7 @@
       <dt>Solicitante</dt><dd id="resSol">—</dd>
       <dt>Cliente</dt><dd id="resCli">—</dd>
       <dt>Lugar</dt><dd id="resLugar">—</dd>
+      <dt>Coladas / muestras</dt><dd id="resCnt">—</dd>
       <dt>Total</dt><dd id="resTon">—</dd>
     </dl>
     <a id="resPdf" class="primary as-btn" target="_blank" rel="noopener">Abrir PDF</a>
@@ -120,15 +121,39 @@
 <!-- ───────── DIÁLOGO MUESTRA ───────── -->
 <dialog id="dlgSample">
   <form method="dialog" id="formSample">
-    <h2 id="dlgTitle">Muestra</h2>
-    <label>Muestra (N°) <input name="muestra" required></label>
-    <label>Tipo <input name="tipo" list="tipos" required><datalist id="tipos"></datalist></label>
+    <h2 id="dlgTitle">Colada</h2>
+
+    <label>Pos. colada
+      <input name="pos" inputmode="numeric" maxlength="2" required>
+      <small>correlativo del día: 01, 02, 03…</small>
+    </label>
+
+    <label>Tipo
+      <select name="tipo" id="selTipo" required></select>
+    </label>
+
+    <div id="stdRow" class="stdrow" hidden>
+      <input id="espStd" inputmode="decimal" placeholder="espesor">
+      <button type="button" id="btnStd" class="secondary">Std → x2440x12000</button>
+    </div>
+
     <label>Dimensiones <input name="dimension" placeholder="AxBxC"></label>
-    <label>Grado <input name="grado" list="grados"><datalist id="grados"></datalist></label>
-    <label>Colada <input name="colada" placeholder="Heat N°"></label>
-    <label>Peso (kg) <input name="peso" type="text" inputmode="decimal"></label>
-    <label>Unidades <input name="cantidad" type="text" inputmode="numeric"></label>
-    <label class="check"><input name="identificado" type="checkbox"> Identificado</label>
+
+    <label>Grado
+      <select name="grado" id="selGrado" class="grado"></select>
+    </label>
+
+    <label>Colada (N° hornada) <input name="colada" placeholder="Heat N°"></label>
+
+    <label>Unidades <input name="cantidad" inputmode="numeric"></label>
+    <label>Peso colada (kg) <input name="peso" inputmode="decimal"></label>
+
+    <label class="check" id="idLabel">
+      <input name="identificado" type="checkbox" id="chkId"> Identificada
+    </label>
+
+    <p id="muestrasPrev" class="hint"></p>
+
     <menu>
       <button value="cancel" type="submit" class="link">Cancelar</button>
       <button value="ok" type="submit" class="primary">Guardar</button>
