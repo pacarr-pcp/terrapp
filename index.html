@@ -121,10 +121,10 @@
 <!-- ───────── DIÁLOGO MUESTRA ───────── -->
 <dialog id="dlgSample">
   <form method="dialog" id="formSample">
-    <h2 id="dlgTitle">Colada</h2>
+    <h2 id="dlgTitle">Datos Colada</h2>
 
     <div class="half">
-      <label>Pos. colada
+      <label class="pos">Pos. colada
         <input name="pos" inputmode="numeric" maxlength="2" required>
         <small>correlativo: 01, 02…</small>
       </label>
@@ -134,15 +134,16 @@
     </div>
 
     <label>Tipo
-      <select name="tipo" id="selTipo" required></select>
+      <span class="tiporow">
+        <select name="tipo" id="selTipo" required></select>
+        <button type="button" id="btnStd" class="secondary" hidden>Std</button>
+      </span>
     </label>
 
-    <div id="stdRow" class="stdrow" hidden>
-      <input id="espStd" inputmode="decimal" placeholder="espesor">
-      <button type="button" id="btnStd" class="secondary">Std → x2440x12000</button>
-    </div>
-
-    <label>Dimensiones <input name="dimension" placeholder="AxBxC"></label>
+    <label>Dimensiones
+      <input name="dimension" placeholder="AxBxC">
+      <small id="dimHint"></small>
+    </label>
 
     <label>Grado
       <select name="grado" id="selGrado" class="grado"></select>

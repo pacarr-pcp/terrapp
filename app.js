@@ -17,7 +17,7 @@ const S = {
   inspector:null, pin:null,
   header:{ ar:'', ote:'', ram:'', fecha:'', sedeId:'' },
   coladas:[], editIndex:-1,
-  cliEditId:null, pesoTouched:false
+  cliEditId:null, pesoTouched:false, std:false
 };
 // n° de muestras por colada (espejo del backend)
 function nMuestras(kg, identificada){
@@ -40,11 +40,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const v = e.target.value.trim().replace(/\D/g,'');
     if (v) e.target.value = v.padStart(4,'0').slice(-4);
   });
-  $('#selTipo').addEventListener('change', () => { toggleStd(); recalcPeso(); });
+  $('#selTipo').addEventListener('change', () => { updateStdBtn(); recalcPeso(); });
   $('#selGrado').addEventListener('change', applyGradoColor);
   $('#chkId').addEventListener('change', () => { toggleIdLabel(); updateMuestrasPrev(); });
-  $('#btnStd').addEventListener('click', aplicarStd);
+  $('#btnStd').addEventListener('click', toggleStd);
   $('#formSample').dimension.addEventListener('input', recalcPeso);
+  $('#formSample').dimension.addEventListener('blur', stdCompleta);
   $('#formSample').cantidad.addEventListener('input', recalcPeso);
   $('#formSample').peso.addEventListener('input', () => {
     S.pesoTouched = $('#formSample').peso.value.trim() !== '';
@@ -90,7 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
 function initSelects(){
   $('#selTipo').innerHTML  = TIPOS.map(t => `<option${t==='Plancha'?' selected':''}>${t}</option>`).join('');
   $('#selGrado').innerHTML = GRADOS.map(g => `<option${g==='A36'?' selected':''}>${g}</option>`).join('');
-  toggleStd(); applyGradoColor();
+  updateStdBtn(); applyGradoColor();
 }
 function gradoColor(g){
   g = String(g||'').toUpperCase();
@@ -103,18 +104,41 @@ function applyGradoColor(){
   s.style.color = gradoColor(s.value);
   s.style.fontWeight = '700';
 }
-function toggleStd(){
-  const es = $('#selTipo').value === 'Plancha';
-  const row = $('#stdRow'), btn = $('#btnStd');
-  if (row) row.hidden = !es;
-  if (btn) btn.classList.toggle('std-on', es);
+const STD_SUFIJO = 'x2440x12000';
+const STD_MSG = 'error, ingrese sólo el espesor. [Std] autocompleta a dimensiones estandar de ' + STD_SUFIJO.slice(1);
+
+// Muestra/oculta el botón Std según el tipo; si no es Plancha lo apaga.
+function updateStdBtn(){
+  const btn = $('#btnStd'); if (!btn) return;
+  const esPlancha = $('#selTipo').value === 'Plancha';
+  btn.hidden = !esPlancha;
+  if (!esPlancha && S.std){ S.std = false; aplicaEstiloStd(); }
 }
-function aplicarStd(){
-  const f = $('#formSample');
-  const esp = ($('#espStd').value.trim() || f.dimension.value.trim()).replace(/\s/g,'');
-  if (!esp) { $('#espStd').focus(); return; }
-  f.dimension.value = esp + 'x2440x12000';
-  recalcPeso();
+function aplicaEstiloStd(){
+  const btn = $('#btnStd'), dim = $('#formSample').dimension, hint = $('#dimHint');
+  if (btn) btn.classList.toggle('std-on', !!S.std);
+  if (dim) dim.classList.toggle('dim-std', !!S.std);
+  if (hint) hint.textContent = S.std ? 'ingresa sólo el espesor → ' + STD_SUFIJO.slice(1) : '';
+}
+function toggleStd(){
+  S.std = !S.std;
+  aplicaEstiloStd();
+  if (S.std) stdCompleta();          // si ya hay un número solo, completarlo
+}
+// Completa "50" -> "50x2440x12000". Alerta si hay una x que no sea el patrón estándar.
+function stdCompleta(){
+  if (!S.std) return;
+  const dim = $('#formSample').dimension;
+  const v = dim.value.trim().replace(/\s/g,'').replace(',', '.');
+  if (!v) return;
+  if (/^\d+(\.\d+)?$/.test(v)){                       // sólo el espesor
+    dim.value = v + STD_SUFIJO;
+    recalcPeso();
+  } else if (/^\d+(\.\d+)?x2440x12000$/i.test(v)){    // ya completado, ok
+    dim.value = v;
+  } else {                                            // tiene x y no es el patrón
+    alert(STD_MSG);
+  }
 }
 
 // Tablas de peso (Kg+ portado). Se cargan de data/pesos.json al inicio.
@@ -346,7 +370,7 @@ function renderColadas(){
 function openColada(i){
   S.editIndex = i;
   const f = $('#formSample'); f.reset();
-  $('#dlgTitle').textContent = i<0 ? 'Nueva colada' : 'Editar colada';
+  $('#dlgTitle').textContent = 'Datos Colada';
   const c = i>=0 ? S.coladas[i] : {};
   f.pos.value       = c.pos || pad2(S.coladas.length + 1);
   f.tipo.value      = c.tipo || 'Plancha';
@@ -356,9 +380,9 @@ function openColada(i){
   f.cantidad.value  = c.cantidad || '';
   f.peso.value      = c.peso || '';
   f.identificado.checked = !!c.identificada;
-  $('#espStd').value = '';
+  S.std = false;
   S.pesoTouched = (i >= 0 && !!c.peso);   // en edición se respeta el peso guardado
-  toggleStd(); applyGradoColor(); toggleIdLabel();
+  updateStdBtn(); aplicaEstiloStd(); applyGradoColor(); toggleIdLabel();
   if (!S.pesoTouched) recalcPeso();
   updateMuestrasPrev();
   $('#dlgSample').showModal();
@@ -366,6 +390,13 @@ function openColada(i){
 function onSampleSubmit(ev){
   if (ev.submitter && ev.submitter.value === 'cancel') return;
   const f = ev.target;
+  if (S.std){
+    const v = f.dimension.value.trim().replace(/\s/g,'').replace(',', '.');
+    if (v && /x/i.test(v) && !/^\d+(\.\d+)?x2440x12000$/i.test(v)){
+      ev.preventDefault(); alert(STD_MSG); return;
+    }
+    stdCompleta();
+  }
   const c = {
     pos: pad2(f.pos.value),
     tipo:f.tipo.value.trim(), dimension:f.dimension.value.trim(),

@@ -1,6 +1,6 @@
 /* TerrApp B2 — service worker. Cachea el "app shell" para uso offline.
    Sube la versión (CACHE) cada vez que cambies un archivo del shell. */
-const CACHE = 'terrapp-v7';
+const CACHE = 'terrapp-v8';
 const SHELL = [
   './', './index.html', './styles.css', './app.js',
   './manifest.webmanifest', './icon.svg', './data/pesos.json'
