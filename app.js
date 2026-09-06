@@ -17,7 +17,7 @@ const S = {
   inspector:null, pin:null,
   header:{ ar:'', ote:'', ram:'', fecha:'', sedeId:'' },
   coladas:[], editIndex:-1,
-  cliEditId:null
+  cliEditId:null, pesoTouched:false
 };
 // n° de muestras por colada (espejo del backend)
 function nMuestras(kg, identificada){
@@ -34,19 +34,27 @@ function show(id){ VIEWS.forEach(v => $('#'+v).hidden = (v!==id)); window.scroll
 // ==== arranque ====
 document.addEventListener('DOMContentLoaded', () => {
   initSelects();
+  fetch('data/pesos.json').then(r => r.json()).then(d => { PESOS = d; }).catch(()=>{});
   $('#inFecha').value = todayISO();
   $('#inAr').addEventListener('blur', e => {
     const v = e.target.value.trim().replace(/\D/g,'');
     if (v) e.target.value = v.padStart(4,'0').slice(-4);
   });
-  $('#selTipo').addEventListener('change', toggleStd);
+  $('#selTipo').addEventListener('change', () => { toggleStd(); recalcPeso(); });
   $('#selGrado').addEventListener('change', applyGradoColor);
   $('#chkId').addEventListener('change', () => { toggleIdLabel(); updateMuestrasPrev(); });
   $('#btnStd').addEventListener('click', aplicarStd);
-  $('#formSample').peso.addEventListener('input', updateMuestrasPrev);
+  $('#formSample').dimension.addEventListener('input', recalcPeso);
+  $('#formSample').cantidad.addEventListener('input', recalcPeso);
+  $('#formSample').peso.addEventListener('input', () => {
+    S.pesoTouched = $('#formSample').peso.value.trim() !== '';
+    if (!S.pesoTouched) recalcPeso();
+    updateMuestrasPrev();
+  });
   $('#formSample').pos.addEventListener('blur', e => {
     const v = e.target.value.trim().replace(/\D/g,'');
     if (v) e.target.value = v.padStart(2,'0').slice(-2);
+    updateMuestrasPrev();
   });
 
   const saved = sessionStorage.getItem('terrapp.session');
@@ -98,12 +106,71 @@ function applyGradoColor(){
 function toggleStd(){
   const es = $('#selTipo').value === 'Plancha';
   $('#stdRow').hidden = !es;
+  $('#btnStd').classList.toggle('std-on', es);
 }
 function aplicarStd(){
   const f = $('#formSample');
   const esp = ($('#espStd').value.trim() || f.dimension.value.trim()).replace(/\s/g,'');
   if (!esp) { $('#espStd').focus(); return; }
   f.dimension.value = esp + 'x2440x12000';
+  recalcPeso();
+}
+
+// Tablas de peso (Kg+ portado). Se cargan de data/pesos.json al inicio.
+let PESOS = null;
+const DENS = 7.85e-6;   // kg/mm³ (acero)
+
+// tipo del <select> -> { t: tabla en pesos.lineales, k: constructor de clave, alt?: 2ª tabla }
+const TABLA_TIPO = {
+  'Perfil rectangular': { t:'rectangular', k:n=>`${n[0]}x${n[1]}e${n[2]}` },
+  'Perfil cuadrado':    { t:'cuadrado',    k:n=>`${n[0]}x${n[1]}` },
+  'Perfil canal':       { t:'canal',       k:n=>`${n[0]}x${n[1]}e${n[2]}` },
+  'Costanera':          { t:'costanera',   k:n=>`${n[0]}x${n[1]}e${n[2]}` },
+  'Angulo laminado':    { t:'angulo',      k:n=>`${n[0]}x${n[1]}` },
+  'Viga UPN': { t:'viga_upn', k:n=>`${n[0]}` },
+  'Viga IPE': { t:'viga_ipe', k:n=>`${n[0]}` },
+  'Viga IPN': { t:'viga_ipn', k:n=>`${n[0]}` },
+  'Viga HEA': { t:'viga_hea', k:n=>`${n[0]}` },
+  'Viga HEB': { t:'viga_heb', k:n=>`${n[0]}` },
+  'Viga I':   { t:'wf_i', k:n=>`${n[0]}x${n[1]}` },
+  'viga H':   { t:'wf_h', k:n=>`${n[0]}x${n[1]}` },
+  'Viga WF':  { t:'wf_i', k:n=>`${n[0]}x${n[1]}`, alt:'wf_h' },
+  'Cañería':  { t:'caneria_a53', k:n=>`${n[0]}s${n[1]}`, alt:'caneria_a106' }
+};
+
+function dimsNum(dim){
+  return String(dim||'').split(/[x×*\s]+/)
+    .map(s => parseFloat(String(s).replace(',','.'))).filter(v => isFinite(v));
+}
+
+// -> { kg, via:'fórmula'|'tabla' } o null
+function pesoColada(tipo, dim, cant){
+  const n = dimsNum(dim), q = num(cant);
+  if (!q || n.length < 2) return null;
+
+  if (tipo === 'Plancha'){
+    if (n.length < 3) return null;
+    return { kg: n[0]*n[1]*n[2]*q*DENS, via:'fórmula' };
+  }
+  const map = TABLA_TIPO[tipo];
+  if (!map || !PESOS) return null;
+  const largoM = n[n.length-1] / 1000;                 // último número = largo en mm
+  if (!largoM) return null;
+  const clave = String(map.k(n)).toLowerCase();
+  let kgm = (PESOS.lineales[map.t]||{})[clave];
+  if (kgm == null && map.alt) kgm = (PESOS.lineales[map.alt]||{})[clave];
+  if (kgm == null) return null;
+  return { kg: kgm * largoM * q, via:'tabla' };
+}
+
+function recalcPeso(){
+  const f = $('#formSample'), note = $('#pesoCalcNote');
+  if (S.pesoTouched){ note.textContent = ''; return; }
+  const r = pesoColada(f.tipo.value, f.dimension.value, f.cantidad.value);
+  if (!r){ f.peso.value = ''; note.textContent = ''; updateMuestrasPrev(); return; }
+  f.peso.value = Math.round(r.kg);
+  note.textContent = '≈ ' + r.via + ' (editable)';
+  updateMuestrasPrev();
 }
 function toggleIdLabel(){ $('#idLabel').classList.toggle('on', $('#chkId').checked); }
 function pad2(x){ const v = String(x||'').replace(/\D/g,''); return v ? v.padStart(2,'0').slice(-2) : ''; }
@@ -257,7 +324,10 @@ function openColada(i){
   f.peso.value      = c.peso || '';
   f.identificado.checked = !!c.identificada;
   $('#espStd').value = '';
-  toggleStd(); applyGradoColor(); toggleIdLabel(); updateMuestrasPrev();
+  S.pesoTouched = (i >= 0 && !!c.peso);   // en edición se respeta el peso guardado
+  toggleStd(); applyGradoColor(); toggleIdLabel();
+  if (!S.pesoTouched) recalcPeso();
+  updateMuestrasPrev();
   $('#dlgSample').showModal();
 }
 function onSampleSubmit(ev){
