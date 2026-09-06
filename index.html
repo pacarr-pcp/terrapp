@@ -123,10 +123,15 @@
   <form method="dialog" id="formSample">
     <h2 id="dlgTitle">Colada</h2>
 
-    <label>Pos. colada
-      <input name="pos" inputmode="numeric" maxlength="2" required>
-      <small>correlativo del día: 01, 02, 03…</small>
-    </label>
+    <div class="half">
+      <label>Pos. colada
+        <input name="pos" inputmode="numeric" maxlength="2" required>
+        <small>correlativo: 01, 02…</small>
+      </label>
+      <label class="check" id="idLabel">
+        <input name="identificado" type="checkbox" id="chkId"> Identificada
+      </label>
+    </div>
 
     <label>Tipo
       <select name="tipo" id="selTipo" required></select>
@@ -146,10 +151,9 @@
     <label>Colada (N° hornada) <input name="colada" placeholder="Heat N°"></label>
 
     <label>Unidades <input name="cantidad" inputmode="numeric"></label>
-    <label>Peso colada (kg) <input name="peso" inputmode="decimal"></label>
-
-    <label class="check" id="idLabel">
-      <input name="identificado" type="checkbox" id="chkId"> Identificada
+    <label>Peso colada (kg)
+      <input name="peso" inputmode="decimal">
+      <small id="pesoCalcNote"></small>
     </label>
 
     <p id="muestrasPrev" class="hint"></p>

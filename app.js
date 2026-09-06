@@ -105,8 +105,9 @@ function applyGradoColor(){
 }
 function toggleStd(){
   const es = $('#selTipo').value === 'Plancha';
-  $('#stdRow').hidden = !es;
-  $('#btnStd').classList.toggle('std-on', es);
+  const row = $('#stdRow'), btn = $('#btnStd');
+  if (row) row.hidden = !es;
+  if (btn) btn.classList.toggle('std-on', es);
 }
 function aplicarStd(){
   const f = $('#formSample');
@@ -165,17 +166,19 @@ function pesoColada(tipo, dim, cant){
 
 function recalcPeso(){
   const f = $('#formSample'), note = $('#pesoCalcNote');
-  if (S.pesoTouched){ note.textContent = ''; return; }
+  const setNote = t => { if (note) note.textContent = t; };
+  if (S.pesoTouched){ setNote(''); return; }
   const r = pesoColada(f.tipo.value, f.dimension.value, f.cantidad.value);
-  if (!r){ f.peso.value = ''; note.textContent = ''; updateMuestrasPrev(); return; }
+  if (!r){ f.peso.value = ''; setNote(''); updateMuestrasPrev(); return; }
   f.peso.value = Math.round(r.kg);
-  note.textContent = '≈ ' + r.via + ' (editable)';
+  setNote('≈ ' + r.via + ' (editable)');
   updateMuestrasPrev();
 }
-function toggleIdLabel(){ $('#idLabel').classList.toggle('on', $('#chkId').checked); }
+function toggleIdLabel(){ const l = $('#idLabel'); if (l) l.classList.toggle('on', $('#chkId').checked); }
 function pad2(x){ const v = String(x||'').replace(/\D/g,''); return v ? v.padStart(2,'0').slice(-2) : ''; }
 function updateMuestrasPrev(){
   const f = $('#formSample'), p = $('#muestrasPrev');
+  if (!p) return;
   const kg = num(f.peso.value);
   if (!kg){ p.textContent = ''; return; }
   const n = nMuestras(kg, f.identificado.checked);
