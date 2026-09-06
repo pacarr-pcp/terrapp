@@ -34,7 +34,8 @@ button{font:inherit;min-height:44px;border-radius:9px;cursor:pointer;padding:.6r
 a.as-btn{display:block;text-align:center;text-decoration:none}
 .actions{display:flex;justify-content:space-between;align-items:center;gap:.6rem;margin-top:.4rem}
 .msg{margin:0;font-size:.9rem;color:var(--bad);min-height:1.2em}
-.msg.ok{color:var(--ok)}
+.msg:not(:empty){background:#fde68a;color:#7c2d12;padding:.4rem .6rem;border-radius:8px}
+.msg.ok:not(:empty){background:#bbf7d0;color:#14532d}
 .hint{margin:0;font-size:.85rem;color:var(--muted)}
 .pill,.samples b{font-weight:700}
 .pill{display:inline-block;min-width:1.6em;text-align:center;background:var(--brand);
@@ -53,16 +54,29 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 #formSample small{color:var(--muted);font-size:.78rem}
 #formSample select.grado{font-weight:700}
 .half{display:flex;gap:.7rem;align-items:center}
-.half label.pos{flex:0 0 96px}
+.half label.pos{flex:0 0 60px;min-width:0}
+.half label.pos small{display:none}
+.half label.pos input{text-align:center}
 .half label.check{flex:1;flex-direction:row;align-items:center;gap:.5rem;justify-content:center}
-#chkId{width:22px;height:22px;accent-color:#f59e0b}
+#chkId{width:22px;height:22px;accent-color:#a78bfa}
 .tiporow{display:flex;gap:.5rem;align-items:stretch}
 .tiporow select{flex:3;min-width:0}
-.tiporow #btnStd{flex:1;min-width:56px;white-space:nowrap}
-#btnStd.std-on{background:#dc2626;color:#fff;border-color:#b91c1c}
-input.dim-std{color:#dc2626;font-weight:700}
-#dimHint{color:#dc2626}
+.tiporow #btnStd{flex:1;min-width:56px;white-space:nowrap;font-weight:700}
+#btnStd.std-on{background:#f59e0b;color:#111;border-color:#d97706}
+input.dim-std{color:#c2410c;font-weight:700}
+#dimHint{color:#c2410c}
+input[name="peso"].peso-calc{color:#1d4ed8;font-weight:700}
 #pesoCalcNote{color:#1d4ed8}
+/* experimento: marco morado del screen cuando la colada es "Identificada" */
+body.ident-on::after{content:"";position:fixed;inset:0;border:4px solid #a78bfa;
+  border-radius:4px;pointer-events:none;z-index:9999}
+body.ident-on #dlgSample{border:3px solid #a78bfa}
+/* encabezado: campos AR / OTE / RAM más grandes; botón Buscar en negrita */
+#inAr,#inOte,#inRam{font-size:1.15rem;font-weight:600}
+#btnBuscarOte{font-weight:700}
+#sedeFiltro{color:#7f1d1d;font-weight:600}
+#sedeFiltro::placeholder{color:#f87171}
+#selSede{color:#1d4ed8;font-weight:600}
 .result{display:grid;grid-template-columns:auto 1fr;gap:.35rem .9rem;margin:.2rem 0 .6rem}
 .result dt{color:var(--muted);font-size:.85rem}
 .result dd{margin:0;font-weight:600}

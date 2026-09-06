@@ -42,13 +42,16 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   $('#selTipo').addEventListener('change', () => { updateStdBtn(); recalcPeso(); });
   $('#selGrado').addEventListener('change', applyGradoColor);
-  $('#chkId').addEventListener('change', () => { toggleIdLabel(); updateMuestrasPrev(); });
+  $('#chkId').addEventListener('change', () => { toggleIdLabel(); marcoIdent(); updateMuestrasPrev(); });
+  $('#dlgSample').addEventListener('close', () => document.body.classList.remove('ident-on'));
   $('#btnStd').addEventListener('click', toggleStd);
   $('#formSample').dimension.addEventListener('input', recalcPeso);
   $('#formSample').dimension.addEventListener('blur', stdCompleta);
   $('#formSample').cantidad.addEventListener('input', recalcPeso);
   $('#formSample').peso.addEventListener('input', () => {
-    S.pesoTouched = $('#formSample').peso.value.trim() !== '';
+    const p = $('#formSample').peso;
+    S.pesoTouched = p.value.trim() !== '';
+    p.classList.toggle('peso-calc', !S.pesoTouched);
     if (!S.pesoTouched) recalcPeso();
     updateMuestrasPrev();
   });
@@ -193,12 +196,14 @@ function recalcPeso(){
   const setNote = t => { if (note) note.textContent = t; };
   if (S.pesoTouched){ setNote(''); return; }
   const r = pesoColada(f.tipo.value, f.dimension.value, f.cantidad.value);
-  if (!r){ f.peso.value = ''; setNote(''); updateMuestrasPrev(); return; }
+  if (!r){ f.peso.value = ''; f.peso.classList.remove('peso-calc'); setNote(''); updateMuestrasPrev(); return; }
   f.peso.value = Math.round(r.kg);
+  f.peso.classList.add('peso-calc');
   setNote('≈ ' + r.via + ' (editable)');
   updateMuestrasPrev();
 }
 function toggleIdLabel(){ const l = $('#idLabel'); if (l) l.classList.toggle('on', $('#chkId').checked); }
+function marcoIdent(){ document.body.classList.toggle('ident-on', $('#chkId').checked); }
 function pad2(x){ const v = String(x||'').replace(/\D/g,''); return v ? v.padStart(2,'0').slice(-2) : ''; }
 function updateMuestrasPrev(){
   const f = $('#formSample'), p = $('#muestrasPrev');
@@ -313,7 +318,7 @@ async function buscarOte(){
     }
     const opts = SEDES.map(s => `<option value="${esc(s.id)}">${esc(sedeLabel(s))}</option>`).join('');
     box.innerHTML =
-      `<input id="sedeFiltro" type="search" placeholder="filtrar por nombre / comuna / sede">
+      `<input id="sedeFiltro" type="search" placeholder="Filtrar por solicitante, lugar o sede">
        <label>Solicitante y ubicación
          <select id="selSede">${opts}</select>
        </label>
@@ -382,7 +387,8 @@ function openColada(i){
   f.identificado.checked = !!c.identificada;
   S.std = false;
   S.pesoTouched = (i >= 0 && !!c.peso);   // en edición se respeta el peso guardado
-  updateStdBtn(); aplicaEstiloStd(); applyGradoColor(); toggleIdLabel();
+  f.peso.classList.toggle('peso-calc', !S.pesoTouched);
+  updateStdBtn(); aplicaEstiloStd(); applyGradoColor(); toggleIdLabel(); marcoIdent();
   if (!S.pesoTouched) recalcPeso();
   updateMuestrasPrev();
   $('#dlgSample').showModal();
