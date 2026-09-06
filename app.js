@@ -75,6 +75,8 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#btnAMuestras').onclick  = goSamples;
   $('#btnBackHeader').onclick = () => show('viewHeader');
   $('#btnAddSample').onclick  = () => openColada(-1);
+  $('#btnOrdenar').onclick    = ordenarColadas;
+  $('#verCerrar').onclick     = () => $('#dlgVer').close();
   $('#btnGenerar').onclick    = generar;
   $('#btnNueva').onclick      = () => { resetInspeccion(); show('viewHeader'); };
   $('#formSample').addEventListener('submit', onSampleSubmit);
@@ -205,16 +207,22 @@ function recalcPeso(){
 function toggleIdLabel(){ const l = $('#idLabel'); if (l) l.classList.toggle('on', $('#chkId').checked); }
 function marcoIdent(){ document.body.classList.toggle('ident-on', $('#chkId').checked); }
 function pad2(x){ const v = String(x||'').replace(/\D/g,''); return v ? v.padStart(2,'0').slice(-2) : ''; }
+
+// Lista de códigos de muestra AAAA-PP-nnTT de una colada
+function muestrasDeColada(c, ar){
+  const n = nMuestras(c.peso, c.identificada), pp = pad2(c.pos) || 'PP';
+  const A = ar || S.header.ar || '####';
+  const out = [];
+  for (let k=1;k<=n;k++) out.push(`${A}-${pp}-${pad2(k)}${pad2(n)}`);
+  return out;
+}
 function updateMuestrasPrev(){
   const f = $('#formSample'), p = $('#muestrasPrev');
   if (!p) return;
   const kg = num(f.peso.value);
   if (!kg){ p.textContent = ''; return; }
-  const n = nMuestras(kg, f.identificado.checked);
-  const ar = S.header.ar || '####', pp = pad2(f.pos.value) || 'PP';
-  const ej = [];
-  for (let k=1;k<=n;k++) ej.push(`${ar}-${pp}-${pad2(k)}${pad2(n)}`);
-  p.innerHTML = `→ <b>${n}</b> muestra${n>1?'s':''}: ${ej.join(', ')}`;
+  const codes = muestrasDeColada({ peso:kg, identificada:f.identificado.checked, pos:f.pos.value });
+  p.innerHTML = `→ <b>${codes.length}</b> muestra${codes.length>1?'s':''}: ${codes.join(', ')}`;
 }
 
 function todayISO(){ return new Date().toISOString().slice(0,10); }
@@ -344,40 +352,86 @@ function goSamples(){
 }
 
 // ==== coladas ====
+function coladasDesordenadas(){
+  for (let i=1;i<S.coladas.length;i++)
+    if (num(S.coladas[i].pos) < num(S.coladas[i-1].pos)) return true;
+  return false;
+}
+function posDuplicados(){
+  const vistos = new Set();
+  for (const c of S.coladas){ if (vistos.has(c.pos)) return true; vistos.add(c.pos); }
+  return false;
+}
+function ordenarColadas(){
+  S.coladas.sort((a,b) => num(a.pos) - num(b.pos));
+  renderColadas();
+}
+function borrarColada(i){
+  if (!confirm('Esta acción borrará todas las muestras de esta colada. ¿Continuar?')) return;
+  S.coladas.splice(i,1); renderColadas();
+}
+
 function renderColadas(){
   const ul = $('#sampleList'); ul.innerHTML = '';
-  let totM = 0, totKg = 0, totU = 0;
+  let totM = 0, totKg = 0, totU = 0, prevPos = -Infinity;
   S.coladas.forEach((c,i) => {
-    const n = nMuestras(c.peso, c.identificada);
+    const codes = muestrasDeColada(c);
+    const n = codes.length;
     totM += n; totKg += num(c.peso); totU += num(c.cantidad);
+    const fuera = num(c.pos) < prevPos;
+    prevPos = num(c.pos);
+    const notacion = n>1 ? `${codes[0]} … ${codes[n-1]}` : codes[0];
     const li = document.createElement('li');
-    li.innerHTML = `<div>
-        <b>Col. ${esc(c.pos)}</b> · ${esc(c.tipo)}
+    if (c.identificada) li.className = 'ident';
+    li.innerHTML = `<div class="body" data-v="${i}">
+        <b class="col-lbl${fuera?' fuera':''}">Col. ${esc(c.pos)}</b> · ${esc(c.tipo)}
         <span style="color:${gradoColor(c.grado)};font-weight:700"> ${esc(c.grado||'')}</span>
         <span class="pill">${n} m</span>
         <div class="meta">${esc(c.dimension||'')} · Colada ${esc(c.colada||'—')}
           · ${num(c.cantidad)} u · ${num(c.peso)} kg · ${c.identificada ? '✔ Identificada' : 'No Id.'}</div>
-        <div class="meta">${S.header.ar}-${esc(c.pos)}-${pad2(1)}${pad2(n)}${n>1?` … ${S.header.ar}-${esc(c.pos)}-${pad2(n)}${pad2(n)}`:''}</div>
+        <div class="meta">${esc(notacion)}</div>
       </div>
       <div class="sbtns">
         <button class="secondary" data-e="${i}">Editar</button>
-        <button class="link" data-d="${i}">Borrar</button>
+        <button class="del" data-d="${i}" title="Borrar colada">✕</button>
       </div>`;
     ul.appendChild(li);
   });
+  ul.querySelectorAll('[data-v]').forEach(b => b.onclick = () => openVer(+b.dataset.v));
   ul.querySelectorAll('[data-e]').forEach(b => b.onclick = () => openColada(+b.dataset.e));
-  ul.querySelectorAll('[data-d]').forEach(b => b.onclick = () => { S.coladas.splice(+b.dataset.d,1); renderColadas(); });
+  ul.querySelectorAll('[data-d]').forEach(b => b.onclick = () => borrarColada(+b.dataset.d));
   $('#sampleCount').textContent = S.coladas.length;
   $('#totMuestras').textContent = totM;
   $('#totKg').textContent = round(totKg);
   $('#totU').textContent  = totU;
+  $('#btnOrdenar').hidden = !coladasDesordenadas();
+}
+
+function openVer(i){
+  const c = S.coladas[i]; if (!c) return;
+  const codes = muestrasDeColada(c);
+  $('#verTitle').textContent = 'Colada ' + c.pos;
+  $('#verBody').innerHTML = [
+    ['Pos. colada', esc(c.pos)],
+    ['Tipo', esc(c.tipo)],
+    ['Dimensiones', esc(c.dimension || '—')],
+    ['Grado', `<span style="color:${gradoColor(c.grado)}">${esc(c.grado||'—')}</span>`],
+    ['Colada (hornada)', esc(c.colada || '—')],
+    ['Unidades', num(c.cantidad)],
+    ['Peso', num(c.peso) + ' kg'],
+    ['Identificada', c.identificada ? '<span class="badge si">SÍ</span>' : '<span class="badge no">NO</span>']
+  ].map(([k,v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
+  $('#verMuestras').innerHTML = `<b>${codes.length}</b> muestra${codes.length>1?'s':''}: ${codes.join(', ')}`;
+  $('#verEditar').onclick = () => { $('#dlgVer').close(); openColada(i); };
+  $('#dlgVer').showModal();
 }
 function openColada(i){
   S.editIndex = i;
   const f = $('#formSample'); f.reset();
   $('#dlgTitle').textContent = 'Datos Colada';
   const c = i>=0 ? S.coladas[i] : {};
-  f.pos.value       = c.pos || pad2(S.coladas.length + 1);
+  const maxPos = S.coladas.reduce((m,x) => Math.max(m, num(x.pos)), 0);
+  f.pos.value       = c.pos || pad2(maxPos + 1);
   f.tipo.value      = c.tipo || 'Plancha';
   f.dimension.value = c.dimension || '';
   f.grado.value     = c.grado || 'A36';
@@ -421,6 +475,10 @@ function onSampleSubmit(ev){
 async function generar(){
   const msg = $('#samplesMsg'); msg.textContent = ''; msg.className = 'msg';
   if (!S.coladas.length) return (msg.textContent = 'Agregue al menos una colada');
+  if (coladasDesordenadas() || posDuplicados()){
+    msg.textContent = 'Revisar correlativo de coladas';
+    return;
+  }
   const payload = withAuth({
     accion:'crear',
     ar:S.header.ar, ote:S.header.ote, ram:S.header.ram, fecha:S.header.fecha, sedeId:S.header.sedeId,
