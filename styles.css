@@ -93,12 +93,11 @@ body.ident-on #dlgSample{border:3px solid #16a34a}
 .fecha-top{flex:0 0 auto;align-items:flex-end;font-size:.8rem}
 .fecha-top input{min-height:38px;padding:.35rem .5rem;font-size:.85rem}
 .ar-ram{display:flex;gap:.7rem}
-.ar-ram > label{flex:1}
-.ar-ram input{color:#b91c1c;font-weight:700}
+.ar-ram > label{flex:1 1 0;min-width:0}
 .ote-row{display:flex;gap:.5rem;align-items:flex-end}
-.ote-row label.ote{flex:0 0 50%}
-.ote-row #btnBuscarOte{font-weight:700;flex:1}
-#inAr,#inOte,#inRam{font-size:1.15rem;font-weight:600}
+.ote-row label.ote{flex:1 1 0;min-width:0}
+.ote-row #btnBuscarOte{font-weight:700;flex:0 0 auto}
+#inAr,#inOte,#inRam{font-size:1rem;font-weight:700;color:#b91c1c;width:100%;min-width:0}
 .sedebox #sedeFiltro{align-self:flex-end;width:62%;font-size:.72rem;text-align:center;
   color:#374151;background:#fef08a;border-color:#eab308;min-height:36px;padding:.3rem .5rem}
 .sedebox #sedeFiltro::placeholder{color:#374151}
