@@ -240,33 +240,63 @@ function resetInspeccion(){
   $('#headerMsg').textContent = '';
 }
 
+let SEDES = [];   // filas del OTE buscado (acopladas: solicitante + dirección)
+
+function sedeLabel(s){
+  return [s.nombre || 's/nombre', s.sede || s.comuna || '', s.cliente]
+    .filter(Boolean).join(' · ');
+}
+function sedeResumen(s){
+  if (!s) return '';
+  return `Solicitante: <b>${esc(s.nombre || '—')}</b> · ${esc(s.cliente || '')}` +
+    `${s.sede ? ' · ' + esc(s.sede) : ''}${s.comuna ? ' · ' + esc(s.comuna) : ''}`;
+}
+function renderSedeOpts(filtro){
+  const q = (filtro || '').trim().toLowerCase();
+  const sel = $('#selSede'); if (!sel) return;
+  let primeraVisible = null;
+  Array.from(sel.options).forEach(o => {
+    const s = SEDES.find(x => x.id === o.value);
+    const txt = (s ? [s.nombre, s.sede, s.comuna, s.cliente].join(' ') : o.text).toLowerCase();
+    const vis = !q || txt.indexOf(q) >= 0;
+    o.hidden = !vis;
+    if (vis && primeraVisible == null) primeraVisible = o.value;
+  });
+  const cur = SEDES.find(x => x.id === sel.value);
+  const curTxt = cur ? [cur.nombre, cur.sede, cur.comuna, cur.cliente].join(' ').toLowerCase() : '';
+  if (q && curTxt.indexOf(q) < 0 && primeraVisible) sel.value = primeraVisible;
+  S.header.sedeId = sel.value;
+  $('#sedeResumen').innerHTML = sedeResumen(SEDES.find(x => x.id === sel.value));
+}
+
 async function buscarOte(){
   const ote = $('#inOte').value.trim();
-  const box = $('#sedeBox'); box.innerHTML = ''; S.header.sedeId = '';
+  const box = $('#sedeBox'); box.innerHTML = ''; S.header.sedeId = ''; SEDES = [];
   if (!ote) return;
   box.textContent = 'Buscando…';
   try{
     const r = await call(withAuth({ accion:'sedes', ote }));
     if (!r.ok) throw new Error(r.error || 'Error');
-    const sedes = r.sedes || [];
-    if (!sedes.length){
-      box.innerHTML = `<p class="hint">OTE sin ubicaciones. Agrégala en <b>Clientes</b>.</p>`;
+    SEDES = r.sedes || [];
+    if (!SEDES.length){
+      box.innerHTML = `<p class="hint">OTE sin registros. Agrégalo en <b>Clientes</b>.</p>`;
       return;
     }
-    if (sedes.length === 1){
-      S.header.sedeId = sedes[0].id;
-      box.innerHTML = `<p class="hint">Cliente: <b>${esc(sedes[0].cliente)}</b>` +
-        `${sedes[0].sede ? ' · ' + esc(sedes[0].sede) : ''}` +
-        `${sedes[0].comuna ? ' · ' + esc(sedes[0].comuna) : ''}</p>`;
+    if (SEDES.length === 1){
+      S.header.sedeId = SEDES[0].id;
+      box.innerHTML = `<p class="hint">${sedeResumen(SEDES[0])}</p>`;
       return;
     }
-    const opts = sedes.map(s =>
-      `<option value="${esc(s.id)}">${esc(s.cliente)} — ${esc(s.sede || s.comuna || 'sin etiqueta')}</option>`
-    ).join('');
-    box.innerHTML = `<label>Ubicación / nombre a usar
-      <select id="selSede">${opts}</select></label>`;
-    S.header.sedeId = sedes[0].id;
-    $('#selSede').addEventListener('change', e => { S.header.sedeId = e.target.value; });
+    const opts = SEDES.map(s => `<option value="${esc(s.id)}">${esc(sedeLabel(s))}</option>`).join('');
+    box.innerHTML =
+      `<input id="sedeFiltro" type="search" placeholder="filtrar por nombre / comuna / sede">
+       <label>Solicitante y ubicación
+         <select id="selSede">${opts}</select>
+       </label>
+       <p class="hint" id="sedeResumen"></p>`;
+    $('#selSede').addEventListener('change', () => renderSedeOpts($('#sedeFiltro').value));
+    $('#sedeFiltro').addEventListener('input', () => renderSedeOpts($('#sedeFiltro').value));
+    renderSedeOpts('');
   }catch(e){
     box.innerHTML = `<p class="hint">${offlineErr(e) ? 'Sin señal para consultar el OTE' : esc(e.message)}</p>`;
   }
@@ -279,7 +309,7 @@ function goSamples(){
   if (!/^\d{4}$/.test(ar)) return (msg.textContent = 'AR: 4 dígitos');
   if (!ote)   return (msg.textContent = 'Falta el OTE');
   if (!fecha) return (msg.textContent = 'Falta la fecha');
-  if (!S.header.sedeId) return (msg.textContent = 'Presiona "Buscar" y elige la ubicación del OTE');
+  if (!S.header.sedeId) return (msg.textContent = 'Presiona "Buscar" y elige el solicitante / ubicación');
   S.header.ar = ar; S.header.ote = ote; S.header.ram = ram; S.header.fecha = toCL(fecha);
   renderColadas(); show('viewSamples');
 }
