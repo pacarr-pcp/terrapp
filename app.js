@@ -512,6 +512,11 @@ function showResult(r){
   $('#resTon').textContent   = e.totalTon || '—';
   const a = $('#resPdf');
   if (r.pdfUrl){ a.href = r.pdfUrl; a.hidden = false; } else a.hidden = true;
+  const av = $('#resAvisos');
+  if (av){
+    if (r.avisos && r.avisos.length){ av.hidden = false; av.textContent = 'Avisos: ' + r.avisos.join(' · '); }
+    else av.hidden = true;
+  }
   show('viewResult');
 }
 
