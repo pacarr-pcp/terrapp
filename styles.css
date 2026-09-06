@@ -42,12 +42,12 @@ a.as-btn{display:block;text-align:center;text-decoration:none}
   color:#fff;border-radius:999px;padding:.05em .5em;font-size:.85rem}
 .coladas-top{display:flex;justify-content:space-between;align-items:center;gap:.6rem}
 #coladasInfo{color:#991b1b;font-weight:600}
-#btnAddSample{color:#991b1b;border-color:#991b1b}
+#btnAddSample{background:#991b1b;color:#fff;border-color:#7f1d1d;font-weight:700}
 #btnGenerar{background:#f59e0b;color:#111;border-color:#d97706}
 .samples{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.5rem}
 .samples li{border:1px solid var(--line);border-radius:10px;padding:.6rem .7rem;
   display:flex;justify-content:space-between;gap:.6rem;align-items:flex-start}
-.samples li.ident{border-left:5px solid #3b82f6;background:rgba(59,130,246,.08)}
+.samples li.ident{border-left:5px solid #22c55e;background:rgba(34,197,94,.12)}
 .samples li .body{flex:1;cursor:pointer}
 .samples .col-lbl.fuera{color:#c026d3}
 .samples .meta{font-size:.82rem;color:var(--muted)}
@@ -58,7 +58,7 @@ a.as-btn{display:block;text-align:center;text-decoration:none}
 #dlgVer dt{color:var(--muted);font-size:.9rem;align-self:center}
 #dlgVer dd{margin:0;font-size:1.15rem;font-weight:700}
 #dlgVer .badge{display:inline-block;padding:.1em .55em;border-radius:999px;font-size:.9rem}
-#dlgVer .badge.si{background:#1d4ed8;color:#fff}
+#dlgVer .badge.si{background:#16a34a;color:#fff}
 #dlgVer .badge.no{background:var(--line);color:var(--ink)}
 #dlgVer menu{display:flex;justify-content:flex-end;gap:.6rem;margin:.4rem 0 0;padding:0}
 dialog{border:0;border-radius:14px;padding:1.1rem;max-width:420px;width:92%;
@@ -73,7 +73,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 .half label.pos small{display:none}
 .half label.pos input{text-align:center}
 .half label.check{flex:1;flex-direction:row;align-items:center;gap:.5rem;justify-content:center}
-#chkId{width:22px;height:22px;accent-color:#1d4ed8}
+#chkId{width:22px;height:22px;accent-color:#4ade80}
 .tiporow{display:flex;gap:.5rem;align-items:stretch}
 .tiporow select{flex:3;min-width:0}
 .tiporow #btnStd{flex:1;min-width:56px;white-space:nowrap;font-weight:700}
@@ -82,16 +82,29 @@ input.dim-std{color:#c2410c;font-weight:700}
 #dimHint{color:#c2410c}
 input[name="peso"].peso-calc{color:#1d4ed8;font-weight:700}
 #pesoCalcNote{color:#1d4ed8}
-/* marco azul del screen cuando la colada es "Identificada" */
-body.ident-on::after{content:"";position:fixed;inset:0;border:4px solid #1d4ed8;
+/* marco verde del screen cuando la colada es "Identificada" */
+body.ident-on::after{content:"";position:fixed;inset:0;border:4px solid #16a34a;
   border-radius:4px;pointer-events:none;z-index:9999}
-body.ident-on #dlgSample{border:3px solid #1d4ed8}
-/* encabezado: campos AR / OTE / RAM más grandes; botón Buscar en negrita */
+body.ident-on #dlgSample{border:3px solid #16a34a}
+/* ── encabezado ── */
+.h1sub{font-size:.8rem;font-weight:600;color:var(--muted)}
+.head-row{display:flex;justify-content:space-between;align-items:flex-start;gap:.6rem}
+.head-row h1{margin:0}
+.fecha-top{flex:0 0 auto;align-items:flex-end;font-size:.8rem}
+.fecha-top input{min-height:38px;padding:.35rem .5rem;font-size:.85rem}
+.ar-ram{display:flex;gap:.7rem}
+.ar-ram > label{flex:1}
+.ar-ram input{color:#b91c1c;font-weight:700}
+.ote-row{display:flex;gap:.5rem;align-items:flex-end}
+.ote-row label.ote{flex:0 0 50%}
+.ote-row #btnBuscarOte{font-weight:700;flex:1}
 #inAr,#inOte,#inRam{font-size:1.15rem;font-weight:600}
-#btnBuscarOte{font-weight:700}
-#sedeFiltro{color:#7f1d1d;font-weight:600}
-#sedeFiltro::placeholder{color:#f87171}
-#selSede{color:#1d4ed8;font-weight:600}
+.sedebox #sedeFiltro{align-self:flex-end;width:62%;font-size:.72rem;text-align:center;
+  color:#374151;background:#fef08a;border-color:#eab308;min-height:36px;padding:.3rem .5rem}
+.sedebox #sedeFiltro::placeholder{color:#374151}
+#selSede{color:#b91c1c;font-weight:700}
+.hint.azul{color:#1d4ed8}
+.hint.fucsia{color:#c026d3;font-weight:600}
 .result{display:grid;grid-template-columns:auto 1fr;gap:.35rem .9rem;margin:.2rem 0 .6rem}
 .result dt{color:var(--muted);font-size:.85rem}
 .result dd{margin:0;font-weight:600}

@@ -22,7 +22,7 @@
 
   <!-- ───────── LOGIN ───────── -->
   <section id="viewLogin" class="view">
-    <h1>Ingreso</h1>
+    <h1>Ingreso <span class="h1sub">[Reporte de Certificación]</span></h1>
     <label>Inspector
       <select id="inInspector">
         <option value="PCP">PCP</option><option value="SRS">SRS</option>
@@ -39,33 +39,35 @@
   <!-- ───────── MENÚ ───────── -->
   <section id="viewMenu" class="view" hidden>
     <h1>¿Qué vas a hacer?</h1>
-    <button id="btnMenuInsp" class="primary">Nueva inspección</button>
-    <button id="btnMenuCli" class="secondary">Clientes (OTE)</button>
+    <button id="btnMenuInsp" class="primary">Nueva certificación</button>
+    <button id="btnMenuCli" class="secondary">Listado clientes (OTE)</button>
   </section>
 
   <!-- ───────── CABECERA ───────── -->
   <section id="viewHeader" class="view" hidden>
-    <h1>Nueva Certificación</h1>
+    <div class="head-row">
+      <h1>Encabezado</h1>
+      <label class="fecha-top">Fecha
+        <input id="inFecha" type="date">
+      </label>
+    </div>
 
-    <label>AR (N° inspección)
-      <input id="inAr" type="text" inputmode="numeric" maxlength="5" placeholder="0000">
-    </label>
+    <div class="ar-ram">
+      <label>AR (N° inspección)
+        <input id="inAr" type="text" inputmode="numeric" maxlength="5" placeholder="0000">
+      </label>
+      <label>RAM
+        <input id="inRam" type="text" inputmode="numeric" maxlength="6" placeholder="00000">
+      </label>
+    </div>
 
-    <label>OTE
-      <span class="row">
+    <div class="ote-row">
+      <label class="ote">OTE
         <input id="inOte" type="text" inputmode="numeric" maxlength="6" placeholder="0000">
-        <button id="btnBuscarOte" class="secondary">Buscar</button>
-      </span>
-    </label>
+      </label>
+      <button id="btnBuscarOte" class="secondary">Buscar</button>
+    </div>
     <div id="sedeBox" class="sedebox"></div>
-
-    <label>RAM
-      <input id="inRam" type="text" inputmode="numeric" maxlength="6" placeholder="00000">
-    </label>
-
-    <label>Fecha
-      <input id="inFecha" type="date">
-    </label>
 
     <div class="actions">
       <button id="btnBackMenu1" class="link">‹ Menú</button>
@@ -78,7 +80,7 @@
   <section id="viewSamples" class="view" hidden>
     <h1>Coladas <span id="sampleCount" class="pill">0</span></h1>
     <div class="coladas-top">
-      <p id="coladasInfo" class="hint"><b id="totMuestras">0</b> muestras · <b id="totKg">0</b> kg · <span id="totU">0</span> unidades</p>
+      <p id="coladasInfo" class="hint"><b id="totMuestras">0</b> muestras · <b id="totKg">0</b> Ton · <span id="totU">0</span> unidades</p>
       <button id="btnOrdenar" class="link" hidden>Ordenar por pos.</button>
     </div>
     <ul id="sampleList" class="samples"></ul>
@@ -173,7 +175,6 @@
 <dialog id="dlgVer">
   <h2 id="verTitle">Colada</h2>
   <dl class="kv" id="verBody"></dl>
-  <p id="verMuestras" class="hint"></p>
   <menu>
     <button type="button" id="verEditar" class="secondary">Editar</button>
     <button type="button" id="verCerrar" class="primary">Cerrar</button>

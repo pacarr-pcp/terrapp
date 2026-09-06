@@ -316,21 +316,21 @@ async function buscarOte(){
     if (!r.ok) throw new Error(r.error || 'Error');
     SEDES = r.sedes || [];
     if (!SEDES.length){
-      box.innerHTML = `<p class="hint">OTE sin registros. Agrégalo en <b>Clientes</b>.</p>`;
+      box.innerHTML = `<p class="hint fucsia">OTE sin registros. Agrégalo en <b>Clientes</b>.</p>`;
       return;
     }
     if (SEDES.length === 1){
       S.header.sedeId = SEDES[0].id;
-      box.innerHTML = `<p class="hint">${sedeResumen(SEDES[0])}</p>`;
+      box.innerHTML = `<p class="hint azul">${sedeResumen(SEDES[0])}</p>`;
       return;
     }
     const opts = SEDES.map(s => `<option value="${esc(s.id)}">${esc(sedeLabel(s))}</option>`).join('');
     box.innerHTML =
-      `<input id="sedeFiltro" type="search" placeholder="Filtrar por solicitante, lugar o sede">
+      `<input id="sedeFiltro" type="search" placeholder="&gt;&gt;filtro x solicitante, lugar o cede&lt;&lt;">
        <label>Solicitante y ubicación
          <select id="selSede">${opts}</select>
        </label>
-       <p class="hint" id="sedeResumen"></p>`;
+       <p class="hint azul" id="sedeResumen"></p>`;
     $('#selSede').addEventListener('change', () => renderSedeOpts($('#sedeFiltro').value));
     $('#sedeFiltro').addEventListener('input', () => renderSedeOpts($('#sedeFiltro').value));
     renderSedeOpts('');
@@ -361,6 +361,11 @@ function posDuplicados(){
   const vistos = new Set();
   for (const c of S.coladas){ if (vistos.has(c.pos)) return true; vistos.add(c.pos); }
   return false;
+}
+// las coladas ordenadas por pos deben ser exactamente 01,02,03,…,N
+function correlativoOk(){
+  const ps = S.coladas.map(c => num(c.pos)).sort((a,b) => a - b);
+  return ps.length > 0 && ps.every((p,i) => p === i + 1);
 }
 function ordenarColadas(){
   S.coladas.sort((a,b) => num(a.pos) - num(b.pos));
@@ -402,17 +407,17 @@ function renderColadas(){
   ul.querySelectorAll('[data-d]').forEach(b => b.onclick = () => borrarColada(+b.dataset.d));
   $('#sampleCount').textContent = S.coladas.length;
   $('#totMuestras').textContent = totM;
-  $('#totKg').textContent = round(totKg);
+  $('#totKg').textContent = round(totKg / 1000);   // Ton
   $('#totU').textContent  = totU;
   $('#btnOrdenar').hidden = !coladasDesordenadas();
 }
 
 function openVer(i){
   const c = S.coladas[i]; if (!c) return;
-  const codes = muestrasDeColada(c);
+  const codes = muestrasDeColada(c).map(x => x.split('-').pop());   // sólo nnTT: 0103, 0203…
   $('#verTitle').textContent = 'Colada ' + c.pos;
   $('#verBody').innerHTML = [
-    ['Pos. colada', esc(c.pos)],
+    ['Muestras', esc(codes.join(', '))],
     ['Tipo', esc(c.tipo)],
     ['Dimensiones', esc(c.dimension || '—')],
     ['Grado', `<span style="color:${gradoColor(c.grado)}">${esc(c.grado||'—')}</span>`],
@@ -421,7 +426,6 @@ function openVer(i){
     ['Peso', num(c.peso) + ' kg'],
     ['Identificada', c.identificada ? '<span class="badge si">SÍ</span>' : '<span class="badge no">NO</span>']
   ].map(([k,v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
-  $('#verMuestras').innerHTML = `<b>${codes.length}</b> muestra${codes.length>1?'s':''}: ${codes.join(', ')}`;
   $('#verEditar').onclick = () => { $('#dlgVer').close(); openColada(i); };
   $('#dlgVer').showModal();
 }
@@ -475,7 +479,7 @@ function onSampleSubmit(ev){
 async function generar(){
   const msg = $('#samplesMsg'); msg.textContent = ''; msg.className = 'msg';
   if (!S.coladas.length) return (msg.textContent = 'Agregue al menos una colada');
-  if (coladasDesordenadas() || posDuplicados()){
+  if (!correlativoOk()){
     msg.textContent = 'Revisar correlativo de coladas';
     return;
   }
