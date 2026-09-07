@@ -150,54 +150,106 @@ function stdCompleta(){
 let PESOS = null;
 const DENS = 7.85e-6;   // kg/mm³ (acero)
 
-// tipo del <select> -> { t: tabla en pesos.lineales, k: constructor de clave, alt?: 2ª tabla }
-const TABLA_TIPO = {
-  'Perfil rectangular': { t:'rectangular', k:n=>`${n[0]}x${n[1]}e${n[2]}` },
-  'Perfil cuadrado':    { t:'cuadrado',    k:n=>`${n[0]}x${n[1]}` },
-  'Perfil canal':       { t:'canal',       k:n=>`${n[0]}x${n[1]}e${n[2]}` },
-  'Costanera':          { t:'costanera',   k:n=>`${n[0]}x${n[1]}e${n[2]}` },
-  'Angulo laminado':    { t:'angulo',      k:n=>`${n[0]}x${n[1]}` },
-  'Viga UPN': { t:'viga_upn', k:n=>`${n[0]}` },
-  'Viga IPE': { t:'viga_ipe', k:n=>`${n[0]}` },
-  'Viga IPN': { t:'viga_ipn', k:n=>`${n[0]}` },
-  'Viga HEA': { t:'viga_hea', k:n=>`${n[0]}` },
-  'Viga HEB': { t:'viga_heb', k:n=>`${n[0]}` },
-  'Viga I':   { t:'wf_i', k:n=>`${n[0]}x${n[1]}` },
-  'viga H':   { t:'wf_h', k:n=>`${n[0]}x${n[1]}` },
-  'Viga WF':  { t:'wf_i', k:n=>`${n[0]}x${n[1]}`, alt:'wf_h' },
-  'Cañería':  { t:'caneria_a53', k:n=>`${n[0]}s${n[1]}`, alt:'caneria_a106' }
-};
+const DENS_L = 7.85e-3;   // kg por (mm²·m) para perfiles lineales. Kg+ usaba 7,5; 7,85 calza con las tablas.
 
 function dimsNum(dim){
   return String(dim||'').split(/[x×*\s]+/)
     .map(s => parseFloat(String(s).replace(',','.'))).filter(v => isFinite(v));
 }
+function pick(a,b){ return (a === undefined || a === null) ? b : a; }
 
-// -> { kg, via:'fórmula'|'tabla' } o null
-function pesoColada(tipo, dim, cant){
-  const n = dimsNum(dim), q = num(cant);
-  if (!q || n.length < 2) return null;
+// -> { kg, via } o null.  El largo va SIEMPRE al final de "dim" (en mm).
+function pesoColada(tipo, dim, cant, grado){
+  const N = dimsNum(dim), q = num(cant);
+  if (!q || N.length < 2) return null;
+  const L = N[N.length-1] / 1000;          // largo en m
+  const s = N.slice(0, -1);                // números de sección
+  const g = String(grado||'').toUpperCase();
+  const T = (PESOS && PESOS.lineales) || {};
+  const lin  = (tab,key) => (T[tab]||{})[String(key).toLowerCase()];
+  const lin2 = (tab,a,b,e) => {            // clave AxBxeE tolerante a orden de a,b
+    const lo = Math.min(a,b), hi = Math.max(a,b);
+    return pick(lin(tab,`${lo}x${hi}e${e}`), lin(tab,`${hi}x${lo}e${e}`));
+  };
+  const done = (kg,via) => (kg != null && isFinite(kg) && kg > 0) ? { kg, via } : null;
+  // fórmula de plegado (Kg+): x = perímetro − 1,6·e·vértices ;  kg = x·e·L·q·7,85e-3
+  const plegado = (perim,vert,e) => (perim - 1.6*e*vert) * e * L * q * DENS_L;
 
-  if (tipo === 'Plancha'){
-    if (n.length < 3) return null;
-    return { kg: n[0]*n[1]*n[2]*q*DENS, via:'fórmula' };
+  switch (tipo){
+    case 'Plancha':
+    case 'Pletina':
+      if (N.length < 3) return null;
+      return done(N[0]*N[1]*N[2]*q*DENS, 'fórmula');
+
+    case 'Perfil rectangular': {
+      if (s.length < 3) return null;
+      const [a,b,e] = s, t = lin2('rectangular',a,b,e);
+      return t != null ? done(t*L*q,'tabla') : done(plegado(2*a+2*b,4,e),'plegado');
+    }
+    case 'Perfil cuadrado': {
+      if (s.length < 2) return null;
+      const [a,e] = s, t = lin('cuadrado',`${a}x${e}`);
+      return t != null ? done(t*L*q,'tabla') : done(plegado(4*a,4,e),'plegado');
+    }
+    case 'Perfil canal': {
+      if (s.length < 3) return null;
+      let [a,b,e] = s; if (b > a){ const x=a; a=b; b=x; }   // b = lado corto
+      const t = lin2('canal',a,b,e);
+      return t != null ? done(t*L*q,'tabla') : done(plegado(a+2*b,2,e),'plegado');
+    }
+    case 'Costanera': {
+      let sc = s;
+      if (sc.length === 4 && sc[2] === 15) sc = [sc[0],sc[1],sc[3]];  // pliegue 15 implícito
+      if (sc.length < 3) return null;
+      const t = lin2('costanera',sc[0],sc[1],sc[2]);
+      return t != null ? done(t*L*q,'tabla') : null;                  // sin fórmula → blanco
+    }
+    case 'Angulo laminado': {
+      if (s.length < 2) return null;
+      const t = lin('angulo',`${s[0]}x${s[1]}`);
+      return t != null ? done(t*L*q,'tabla') : null;                  // blanco
+    }
+    case 'Angulo plegado': {
+      if (s.length < 2) return null;
+      const e = s[s.length-1];
+      const a = s[0], b = s.length >= 3 ? s[1] : s[0];
+      return done(plegado(a+b,1,e),'plegado');
+    }
+    case 'Viga UPN': case 'Viga IPE': case 'Viga IPN': case 'Viga HEA': case 'Viga HEB': {
+      const tab = { 'Viga UPN':'viga_upn','Viga IPE':'viga_ipe','Viga IPN':'viga_ipn',
+                    'Viga HEA':'viga_hea','Viga HEB':'viga_heb' }[tipo];
+      const t = lin(tab,`${s[0]}`);
+      return t != null ? done(t*L*q,'tabla') : null;                  // blanco
+    }
+    case 'Viga WF': case 'Viga I': case 'viga H': {
+      if (s.length < 2) return null;
+      const key = `${s[0]}x${s[1]}`;
+      const t = pick(lin('wf_i',key), lin('wf_h',key));
+      return t != null ? done(t*L*q,'tabla') : null;                  // blanco
+    }
+    case 'Cañería': {
+      if (s.length < 2) return null;
+      if (g === 'A53' || g === 'A106'){
+        const t = lin(g === 'A106' ? 'caneria_a106' : 'caneria_a53', `${s[0]}s${s[1]}`);
+        return t != null ? done(t*L*q,'tabla') : null;               // tabla pobre → blanco
+      }
+      const de = s[0], di = s[1];                                     // Ø ext / Ø int (calculada)
+      if (di == null || di >= de) return null;
+      return done(Math.PI/4*(de*de - di*di) * L * q * DENS_L, 'anillo');
+    }
+    case 'Redondo':
+      return done(Math.PI/4 * s[0]*s[0] * L * q * DENS_L, 'fórmula');
+
+    default:
+      return null;   // Bobina, Perfil Especial, Otro → manual
   }
-  const map = TABLA_TIPO[tipo];
-  if (!map || !PESOS) return null;
-  const largoM = n[n.length-1] / 1000;                 // último número = largo en mm
-  if (!largoM) return null;
-  const clave = String(map.k(n)).toLowerCase();
-  let kgm = (PESOS.lineales[map.t]||{})[clave];
-  if (kgm == null && map.alt) kgm = (PESOS.lineales[map.alt]||{})[clave];
-  if (kgm == null) return null;
-  return { kg: kgm * largoM * q, via:'tabla' };
 }
 
 function recalcPeso(){
   const f = $('#formSample'), note = $('#pesoCalcNote');
   const setNote = t => { if (note) note.textContent = t; };
   if (S.pesoTouched){ setNote(''); return; }
-  const r = pesoColada(f.tipo.value, f.dimension.value, f.cantidad.value);
+  const r = pesoColada(f.tipo.value, f.dimension.value, f.cantidad.value, f.grado.value);
   if (!r){ f.peso.value = ''; f.peso.classList.remove('peso-calc'); setNote(''); updateMuestrasPrev(); return; }
   f.peso.value = Math.round(r.kg);
   f.peso.classList.add('peso-calc');
