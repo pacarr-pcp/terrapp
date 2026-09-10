@@ -541,6 +541,7 @@ async function generar(){
     coladas:S.coladas
   });
   $('#btnGenerar').disabled = true;
+  showWorking('Generando el reporte…<br><small>puede tardar unos segundos</small>');
   try{
     if (!navigator.onLine) throw new Error('offline');
     const r = await call(payload);
@@ -553,8 +554,14 @@ async function generar(){
       $('#queuedMsg').textContent = 'Guardado en cola: se enviará al recuperar señal.';
       msg.className = 'msg ok'; msg.textContent = 'Inspección en cola ✓';
     } else { msg.textContent = e.message; }
-  }finally{ $('#btnGenerar').disabled = false; }
+  }finally{ hideWorking(); $('#btnGenerar').disabled = false; }
 }
+function showWorking(html){
+  const w = $('#working'); if (!w) return;
+  $('#workingMsg').innerHTML = html || 'Trabajando…';
+  w.hidden = false;
+}
+function hideWorking(){ const w = $('#working'); if (w) w.hidden = true; }
 function showResult(r){
   const e = r.encabezado || {};
   $('#resSol').textContent   = e.solicitante || '—';
@@ -563,21 +570,11 @@ function showResult(r){
   $('#resCnt').textContent   = (e.nColadas != null ? e.nColadas + ' / ' + e.nMuestras : '—');
   $('#resTon').textContent   = e.totalTon || '—';
   const a = $('#resPdf');
-  if (S._pdfBlobUrl){ URL.revokeObjectURL(S._pdfBlobUrl); S._pdfBlobUrl = null; }
-  if (r.pdfB64){                                  // abrir desde los bytes (no depende de Drive)
-    try {
-      const bin = atob(r.pdfB64);
-      const buf = new Uint8Array(bin.length);
-      for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
-      S._pdfBlobUrl = URL.createObjectURL(new Blob([buf], { type:'application/pdf' }));
-      a.href = S._pdfBlobUrl; a.hidden = false;
-    } catch(_){ if (r.pdfUrl){ a.href = r.pdfUrl; a.hidden = false; } else a.hidden = true; }
-  } else if (r.pdfUrl){ a.href = r.pdfUrl; a.hidden = false; }
-  else a.hidden = true;
+  if (r.pdfUrl){ a.href = r.pdfUrl; a.hidden = false; } else a.hidden = true;
   const av = $('#resAvisos');
   if (av){
     const msgs = (r.avisos || []).slice();
-    if (r.pdfUrl && r.pdfShared === false) msgs.push('el enlace de Drive quedó privado; se abre el PDF local');
+    if (r.pdfUrl && r.pdfShared === false) msgs.push('el enlace del PDF quedó privado; ábrelo desde la carpeta Drive');
     if (msgs.length){ av.hidden = false; av.textContent = 'Avisos: ' + msgs.join(' · '); }
     else av.hidden = true;
   }
