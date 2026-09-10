@@ -563,10 +563,22 @@ function showResult(r){
   $('#resCnt').textContent   = (e.nColadas != null ? e.nColadas + ' / ' + e.nMuestras : '—');
   $('#resTon').textContent   = e.totalTon || '—';
   const a = $('#resPdf');
-  if (r.pdfUrl){ a.href = r.pdfUrl; a.hidden = false; } else a.hidden = true;
+  if (S._pdfBlobUrl){ URL.revokeObjectURL(S._pdfBlobUrl); S._pdfBlobUrl = null; }
+  if (r.pdfB64){                                  // abrir desde los bytes (no depende de Drive)
+    try {
+      const bin = atob(r.pdfB64);
+      const buf = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+      S._pdfBlobUrl = URL.createObjectURL(new Blob([buf], { type:'application/pdf' }));
+      a.href = S._pdfBlobUrl; a.hidden = false;
+    } catch(_){ if (r.pdfUrl){ a.href = r.pdfUrl; a.hidden = false; } else a.hidden = true; }
+  } else if (r.pdfUrl){ a.href = r.pdfUrl; a.hidden = false; }
+  else a.hidden = true;
   const av = $('#resAvisos');
   if (av){
-    if (r.avisos && r.avisos.length){ av.hidden = false; av.textContent = 'Avisos: ' + r.avisos.join(' · '); }
+    const msgs = (r.avisos || []).slice();
+    if (r.pdfUrl && r.pdfShared === false) msgs.push('el enlace de Drive quedó privado; se abre el PDF local');
+    if (msgs.length){ av.hidden = false; av.textContent = 'Avisos: ' + msgs.join(' · '); }
     else av.hidden = true;
   }
   show('viewResult');
